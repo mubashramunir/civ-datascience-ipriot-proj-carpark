@@ -3,14 +3,14 @@ If you have a Raspberry Pi, or a SenseHAT emulator under Debian, you do not need
 
 You need to split the classes here into two files, one for the CarParkDisplay and one for the CarDetector.
 Attend to the TODOs in each class to complete the implementation."""
-from interfaces import CarparkSensorListener
-from interfaces import CarparkDataProvider
+from smartpark.interfaces import CarparkSensorListener
+from smartpark.interfaces import CarparkDataProvider
 import threading
 import time
 import tkinter as tk
 from typing import Iterable
-#TODO: replace this module with yours
-import mocks
+from smartpark.carpark_manager import CarparkManager
+
 
 # ------------------------------------------------------------------------------------#
 # You don't need to understand how to implement this class.                           #
@@ -97,7 +97,7 @@ class CarParkDisplay:
     def update_display(self):
         field_values = dict(zip(CarParkDisplay.fields, [
             f'{self._provider.available_spaces:03d}',
-            f'{self._provider.temperature:02d}℃',
+            f'{self._provider.temperature:.1f}℃',
             time.strftime("%H:%M:%S",self._provider.current_time)
         ]))
         self.window.update(field_values)
@@ -131,7 +131,7 @@ class CarDetectorWindow:
         )
         self.temp_label.grid(padx=10, pady=5,column=0,row=2)
         self.temp_var=tk.StringVar()
-        self.temp_var.trace_add("write",lambda x,y,v: self.temperature_changed(float(self.temp_var.get())))
+        self.temp_var.trace_add("write",lambda *args: self.handle_temperature_input())
         self.temp_box=tk.Entry(
             self.root,font=('Arial', 20),textvariable=self.temp_var
         )
@@ -160,28 +160,44 @@ class CarDetectorWindow:
         for listener in self.listeners:
             listener.incoming_car(self.current_license)
 
+ 
     def outgoing_car(self):
-#        print("Car goes out")
+        """Notify listeners when a car exits."""
         for listener in self.listeners:
             listener.outgoing_car(self.current_license)
 
-    def temperature_changed(self,temp):
+    def handle_temperature_input(self):
+        """Read the temperature input and forward valid readings."""
+        try:
+            temperature = float(self.temp_var.get())
+        except ValueError:
+            return
+
+        self.temperature_changed(temperature)
+
+    def temperature_changed(self, temp):
+        """Notify listeners of a new temperature reading."""
+        print(f"GUI temperature event received: {temp}")
+
         for listener in self.listeners:
             listener.temperature_reading(temp)
+
+
 
 
 if __name__ == '__main__':
     root = tk.Tk()
 
-    #TODO: This is my dodgy mockup. Replace it with a good one!
-    mock=mocks.MockCarparkManager()
+    # Create the real carpark manager.
+    manager = CarparkManager("samples_and_snippets/config.json")
 
-    display=CarParkDisplay(root)
-    #TODO: Set the display to use your data source
-    display.data_provider=mock
+    # Connect the display to the manager.
+    display = CarParkDisplay(root)
+    display.data_provider = manager
 
-    detector=CarDetectorWindow(root)
-    #TODO: Attach your event listener
-    detector.add_listener(mock)
+    # Connect the sensor simulator to the manager.
+    detector = CarDetectorWindow(root)
+    detector.add_listener(manager)
 
     root.mainloop()
+
