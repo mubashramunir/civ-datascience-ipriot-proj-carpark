@@ -24,14 +24,27 @@ class CarparkManager(CarparkSensorListener, CarparkDataProvider):
 
         self.cars = {}
         self._temperature = 0
+        self._update_callbacks = []
         self.logger = logging.getLogger("smartpark.carpark")
 
+        
         if not self.logger.handlers:
-                handler = logging.FileHandler("carpark_activity.log", encoding="utf-8")
-                handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-        self.logger.addHandler(handler)
+            handler = logging.FileHandler("carpark_activity.log", encoding="utf-8")
+            handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+            self.logger.addHandler(handler)
+
         self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
+
+    
+    def add_update_callback(self, callback):
+        """Register a callback for carpark data updates."""
+        self._update_callbacks.append(callback)
+
+    def notify_updates(self):
+        """Notify registered callbacks when carpark data changes."""
+        for callback in self._update_callbacks:
+            callback()
 
     @property
     def available_spaces(self):
@@ -72,6 +85,7 @@ class CarparkManager(CarparkSensorListener, CarparkDataProvider):
         self.logger.info("Car entered: %s", license_plate)
         print(f"Car {license_plate} entered successfully.")
         print(f"Available spaces: {self.available_spaces}")
+        self.notify_updates()
     
     def outgoing_car(self, license_plate):
         """Register a car leaving the carpark."""
@@ -94,6 +108,7 @@ class CarparkManager(CarparkSensorListener, CarparkDataProvider):
 
         print(f"Car {license_plate} exited successfully.")
         print(f"Available spaces: {self.available_spaces}")
+        self.notify_updates()
 
 
     
@@ -108,3 +123,4 @@ class CarparkManager(CarparkSensorListener, CarparkDataProvider):
         self._temperature = temperature
         self.logger.info("Temperature updated: %.1f C", temperature)
         print(f"Temperature updated to {temperature}°C")
+        self.notify_updates()

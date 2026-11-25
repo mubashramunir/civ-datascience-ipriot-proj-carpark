@@ -17,6 +17,7 @@ if __name__ == '__main__':
     # Connect the display to the manager.
     display = CarParkDisplay(root)
     display.data_provider = manager
+    manager.add_update_callback(display.update_display)
 
     # Connect the sensor simulator to the manager.
     detector = CarDetectorWindow(root)
