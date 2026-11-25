@@ -1,5 +1,6 @@
 
 """Manage vehicles and parking spaces in the Smart Carpark."""
+
 import logging
 from datetime import datetime
 
@@ -27,16 +28,21 @@ class CarparkManager(CarparkSensorListener, CarparkDataProvider):
         self._update_callbacks = []
         self.logger = logging.getLogger("smartpark.carpark")
 
-        
+        # Prevent duplicate logging handlers.
         if not self.logger.handlers:
-            handler = logging.FileHandler("carpark_activity.log", encoding="utf-8")
-            handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+            handler = logging.FileHandler(
+                "carpark_activity.log", encoding="utf-8"
+            )
+            handler.setFormatter(
+                logging.Formatter(
+                    "%(asctime)s - %(levelname)s - %(message)s"
+                )
+            )
             self.logger.addHandler(handler)
 
         self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
 
-    
     def add_update_callback(self, callback):
         """Register a callback for carpark data updates."""
         self._update_callbacks.append(callback)
@@ -61,20 +67,21 @@ class CarparkManager(CarparkSensorListener, CarparkDataProvider):
         """Return the current local time."""
         return datetime.now().timetuple()
 
-    
     def incoming_car(self, license_plate):
         """Register a car entering if a parking space is available."""
         if not license_plate or not license_plate.strip():
             print("Error: Licence plate cannot be empty.")
             return
 
+        # Standardise the licence plate before checking it.
         license_plate = license_plate.strip().upper()
 
         if license_plate in self.cars:
-                print(f"Error: Car {license_plate} is already parked.")
-                self.logger.warning("Duplicate entry rejected: %s", license_plate)
-
-                return
+            print(f"Error: Car {license_plate} is already parked.")
+            self.logger.warning(
+                "Duplicate entry rejected: %s", license_plate
+            )
+            return
 
         if self.available_spaces == 0:
             print("Error: Carpark is full.")
@@ -83,10 +90,13 @@ class CarparkManager(CarparkSensorListener, CarparkDataProvider):
         car = Car(license_plate)
         self.cars[license_plate] = car
         self.logger.info("Car entered: %s", license_plate)
+
         print(f"Car {license_plate} entered successfully.")
         print(f"Available spaces: {self.available_spaces}")
+
+        # Notify the display after a successful entry.
         self.notify_updates()
-    
+
     def outgoing_car(self, license_plate):
         """Register a car leaving the carpark."""
         if not license_plate or not license_plate.strip():
@@ -97,9 +107,12 @@ class CarparkManager(CarparkSensorListener, CarparkDataProvider):
 
         if license_plate not in self.cars:
             print(f"Error: Car {license_plate} is not in the carpark.")
-            self.logger.warning("Unknown exit rejected: %s", license_plate)
+            self.logger.warning(
+                "Unknown exit rejected: %s", license_plate
+            )
             return
 
+        # Record the exit time before removing the vehicle.
         car = self.cars[license_plate]
         car.record_exit()
 
@@ -110,8 +123,6 @@ class CarparkManager(CarparkSensorListener, CarparkDataProvider):
         print(f"Available spaces: {self.available_spaces}")
         self.notify_updates()
 
-
-    
     def temperature_reading(self, reading):
         """Store a new temperature reading."""
         try:
@@ -122,5 +133,6 @@ class CarparkManager(CarparkSensorListener, CarparkDataProvider):
 
         self._temperature = temperature
         self.logger.info("Temperature updated: %.1f C", temperature)
+
         print(f"Temperature updated to {temperature}°C")
         self.notify_updates()
